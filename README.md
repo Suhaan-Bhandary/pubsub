@@ -1,7 +1,3 @@
-> 🚧 **Project Status: In Progress**  
-> This project is currently under active development.  
-> The core interfaces and types are defined, but full in-memory implementation and additional features are still being built.  
-
 # Go PubSub
 
 A lightweight, type-safe, in-memory Publish/Subscribe (Pub/Sub) library for Go. This library provides a generic interface to publish and subscribe to events using custom event types.
@@ -32,7 +28,23 @@ type MyEvent struct {
 ### Create a Publisher
 
 ```go
-publisher := memory.NewPublisher[MyEvent]()
+
+var hooks = memory.Hooks[TestEvent]{
+	OnPublish: func(e TestEvent) {
+		fmt.Println("Published:", e)
+	},
+	OnSubscribe: func(sub pubsub.Subscriber[TestEvent]) {
+		fmt.Println("Subscriber added", sub)
+	},
+	OnUnSubscribe: func(sub pubsub.Subscriber[TestEvent]) {
+		fmt.Println("Subscriber removed", sub)
+	},
+	OnClose: func() {
+		fmt.Println("Publisher closed")
+	},
+}
+
+publisher := memory.NewPublisher[MyEvent](hooks)
 ```
 
 ### Create and Subscribe a Subscriber
