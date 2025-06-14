@@ -1,3 +1,6 @@
+> 🚧 **Project Status: In Progress**  
+> This project is currently under active development.  
+> The core interfaces and types are defined, but full in-memory implementation and additional features are still being built.  
 
 # Go PubSub
 
