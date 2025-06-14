@@ -50,15 +50,11 @@ func TestBasicExample(t *testing.T) {
 	}()
 
 	expected := 0
-	for {
-		event, ok := subscriber.Listen()
-		if !ok {
-			break
-		}
-
+	for event := range subscriber.C() {
 		if expected != event.Data {
 			t.Fatalf("error listening to socket, expected: %d, got: %d", expected, event.Data)
 		}
+
 		expected++
 	}
 }
@@ -91,12 +87,7 @@ func TestMultipleSubscriber(t *testing.T) {
 		defer wg.Done()
 
 		expected := 0
-		for {
-			event, ok := subscriber1.Listen()
-			if !ok {
-				break
-			}
-
+		for event := range subscriber1.C() {
 			if expected != event.Data {
 				t.Errorf("error listening to socket, expected: %d, got: %d", expected, event.Data)
 			}
@@ -108,12 +99,7 @@ func TestMultipleSubscriber(t *testing.T) {
 		defer wg.Done()
 
 		expected := 0
-		for {
-			event, ok := subscriber2.Listen()
-			if !ok {
-				break
-			}
-
+		for event := range subscriber2.C() {
 			if expected != event.Data {
 				t.Errorf("error listening to socket, expected: %d, got: %d", expected, event.Data)
 			}
@@ -157,12 +143,7 @@ func TestMultiplePublisher(t *testing.T) {
 	}()
 
 	readCount := 0
-	for {
-		_, ok := subscriber.Listen()
-		if !ok {
-			break
-		}
-
+	for range subscriber.C() {
 		readCount++
 	}
 
@@ -216,11 +197,7 @@ func TestMultiplePublishserSubscriber(t *testing.T) {
 		defer wg.Done()
 
 		readCount := 0
-		for {
-			_, ok := subscriber1.Listen()
-			if !ok {
-				break
-			}
+		for range subscriber1.C() {
 			readCount++
 		}
 
@@ -234,12 +211,7 @@ func TestMultiplePublishserSubscriber(t *testing.T) {
 		defer wg.Done()
 
 		readCount := 0
-		for {
-			_, ok := subscriber2.Listen()
-			if !ok {
-				break
-			}
-
+		for range subscriber2.C() {
 			readCount++
 		}
 

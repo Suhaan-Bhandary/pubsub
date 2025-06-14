@@ -65,6 +65,13 @@ for {
 
     fmt.Println("Received event:", e)
 }
+
+// or
+
+for event := range subscriber.C() {
+    fmt.Println("Received event:", e)
+}
+
 ```
 
 ### Clean Up

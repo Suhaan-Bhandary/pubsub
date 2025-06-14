@@ -146,6 +146,10 @@ func (s *subscriber[Event]) Listen() (Event, bool) {
 	return event, ok
 }
 
+func (s *subscriber[Event]) C() <-chan Event {
+	return s.eventCh
+}
+
 func (s *subscriber[Event]) Close() {
 	s.mu.Lock()
 	defer s.mu.Unlock()

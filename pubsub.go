@@ -22,6 +22,9 @@ type Subscriber[Event any] interface {
 	// Returns false if further events cann't be fetched.
 	Listen() (Event, bool)
 
+	// C exposes Channel to easy read or range over events.
+	C() <-chan Event
+
 	// Close shuts down the Subscriber and releases any resources.
 	Close()
 }
