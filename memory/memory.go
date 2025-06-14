@@ -41,7 +41,7 @@ func (p *publisher[Event]) Publish(event Event) error {
 	}
 
 	for subscriber := range p.subscribers {
-		subscriber.Push(event)
+		subscriber.push(event)
 	}
 
 	return nil
@@ -61,7 +61,7 @@ func (p *publisher[Event]) Subscribe(subscriber pubsub.Subscriber[Event]) error 
 	}
 
 	p.subscribers[internalSubscriber] = Empty{}
-	internalSubscriber.Acknowledge(p)
+	internalSubscriber.acknowledge(p)
 
 	return nil
 }
@@ -80,7 +80,7 @@ func (p *publisher[Event]) UnSubscribe(subscriber pubsub.Subscriber[Event]) erro
 	}
 
 	delete(p.subscribers, internalSubscriber)
-	internalSubscriber.AckRemoval(p)
+	internalSubscriber.ackRemoval(p)
 
 	return nil
 }
@@ -94,7 +94,7 @@ func (p *publisher[Event]) Close() error {
 	}
 
 	for subscriber := range p.subscribers {
-		subscriber.AckRemoval(p)
+		subscriber.ackRemoval(p)
 	}
 
 	p.subscribers = make(map[internalSubscriber[Event]]Empty)
@@ -104,14 +104,14 @@ func (p *publisher[Event]) Close() error {
 type internalSubscriber[Event any] interface {
 	pubsub.Subscriber[Event]
 
-	// Push is called by the Publisher to send an event to this subscriber.
-	Push(event Event)
+	// push is called by the Publisher to send an event to this subscriber.
+	push(event Event)
 
-	// Acknowledge is called by the Publisher to acknowledge subscription.
-	Acknowledge(pub pubsub.Publisher[Event])
+	// acknowledge is called by the Publisher to acknowledge subscription.
+	acknowledge(pub pubsub.Publisher[Event])
 
-	// AckRemoval shuts down the subscriber and releases the resources, if no publisher is listening.
-	AckRemoval(pub pubsub.Publisher[Event]) error
+	// ackRemoval shuts down the subscriber and releases the resources, if no publisher is listening.
+	ackRemoval(pub pubsub.Publisher[Event]) error
 }
 
 // subscriber is an in-memory generic implementation of the pubsub.Subscriber interface.
@@ -160,7 +160,7 @@ func (s *subscriber[Event]) Close() {
 	}
 }
 
-func (s *subscriber[Event]) AckRemoval(publisher pubsub.Publisher[Event]) error {
+func (s *subscriber[Event]) ackRemoval(publisher pubsub.Publisher[Event]) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -175,7 +175,7 @@ func (s *subscriber[Event]) AckRemoval(publisher pubsub.Publisher[Event]) error 
 	return nil
 }
 
-func (s *subscriber[Event]) Push(event Event) {
+func (s *subscriber[Event]) push(event Event) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -190,7 +190,7 @@ func (s *subscriber[Event]) Push(event Event) {
 	}
 }
 
-func (s *subscriber[Event]) Acknowledge(publisher pubsub.Publisher[Event]) {
+func (s *subscriber[Event]) acknowledge(publisher pubsub.Publisher[Event]) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
