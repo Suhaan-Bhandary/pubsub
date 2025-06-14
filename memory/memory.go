@@ -14,18 +14,31 @@ type Empty struct{}
 type publisher[Event any] struct {
 	mu          sync.RWMutex
 	subscribers map[internalSubscriber[Event]]Empty
+	hooks       Hooks[Event]
+}
+
+type Hooks[Event any] struct {
+	OnPublish     func(event Event)
+	OnSubscribe   func(subscriber pubsub.Subscriber[Event])
+	OnUnSubscribe func(subscriber pubsub.Subscriber[Event])
+	OnClose       func()
 }
 
 // NewPublisher creates a new in-memory publisher for a specific Event type.
-func NewPublisher[Event any]() pubsub.Publisher[Event] {
+func NewPublisher[Event any](hooks Hooks[Event]) pubsub.Publisher[Event] {
 	return &publisher[Event]{
 		subscribers: make(map[internalSubscriber[Event]]Empty),
+		hooks:       hooks,
 	}
 }
 
 func (p *publisher[Event]) Publish(event Event) error {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
+
+	if p.hooks.OnPublish != nil {
+		p.hooks.OnPublish(event)
+	}
 
 	for subscriber := range p.subscribers {
 		subscriber.Push(event)
@@ -37,6 +50,10 @@ func (p *publisher[Event]) Publish(event Event) error {
 func (p *publisher[Event]) Subscribe(subscriber pubsub.Subscriber[Event]) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+
+	if p.hooks.OnSubscribe != nil {
+		p.hooks.OnSubscribe(subscriber)
+	}
 
 	internalSubscriber, ok := subscriber.(internalSubscriber[Event])
 	if !ok {
@@ -53,6 +70,10 @@ func (p *publisher[Event]) UnSubscribe(subscriber pubsub.Subscriber[Event]) erro
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
+	if p.hooks.OnUnSubscribe != nil {
+		p.hooks.OnUnSubscribe(subscriber)
+	}
+
 	internalSubscriber, ok := subscriber.(internalSubscriber[Event])
 	if !ok {
 		return fmt.Errorf("invalid subscriber")
@@ -67,6 +88,10 @@ func (p *publisher[Event]) UnSubscribe(subscriber pubsub.Subscriber[Event]) erro
 func (p *publisher[Event]) Close() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+
+	if p.hooks.OnClose != nil {
+		p.hooks.OnClose()
+	}
 
 	for subscriber := range p.subscribers {
 		subscriber.AckRemoval(p)

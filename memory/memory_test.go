@@ -1,6 +1,7 @@
 package memory_test
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 
@@ -15,9 +16,24 @@ var opts = memory.SubscriberOptions{
 	BufferSize: 10000,
 }
 
+var hooks = memory.Hooks[TestEvent]{
+	OnPublish: func(e TestEvent) {
+		fmt.Println("Published:", e)
+	},
+	OnSubscribe: func(sub pubsub.Subscriber[TestEvent]) {
+		fmt.Println("Subscriber added", sub)
+	},
+	OnUnSubscribe: func(sub pubsub.Subscriber[TestEvent]) {
+		fmt.Println("Subscriber removed", sub)
+	},
+	OnClose: func() {
+		fmt.Println("Publisher closed")
+	},
+}
+
 // TestBasicExample tests the basic scenario with one publisher and one subscriber
 func TestBasicExample(t *testing.T) {
-	publisher := memory.NewPublisher[TestEvent]()
+	publisher := memory.NewPublisher(hooks)
 	subscriber := memory.NewSubscriber[TestEvent](opts)
 
 	publisher.Subscribe(subscriber)
@@ -49,7 +65,7 @@ func TestBasicExample(t *testing.T) {
 
 // TestMultipleSubscriber check working of one publisher with multiple subscribers
 func TestMultipleSubscriber(t *testing.T) {
-	publisher := memory.NewPublisher[TestEvent]()
+	publisher := memory.NewPublisher(hooks)
 
 	subscriber1 := memory.NewSubscriber[TestEvent](opts)
 	subscriber2 := memory.NewSubscriber[TestEvent](opts)
@@ -110,8 +126,8 @@ func TestMultipleSubscriber(t *testing.T) {
 
 // TestMultiplePublisher check working of multiple publisher with single subscriber
 func TestMultiplePublisher(t *testing.T) {
-	publisher1 := memory.NewPublisher[TestEvent]()
-	publisher2 := memory.NewPublisher[TestEvent]()
+	publisher1 := memory.NewPublisher(hooks)
+	publisher2 := memory.NewPublisher(hooks)
 
 	subscriber := memory.NewSubscriber[TestEvent](opts)
 	publisher1.Subscribe(subscriber)
@@ -158,8 +174,8 @@ func TestMultiplePublisher(t *testing.T) {
 
 // TestMultiplePublishserSubscriber check working of multiple publisher with multiple subscribers
 func TestMultiplePublishserSubscriber(t *testing.T) {
-	publisher1 := memory.NewPublisher[TestEvent]()
-	publisher2 := memory.NewPublisher[TestEvent]()
+	publisher1 := memory.NewPublisher(hooks)
+	publisher2 := memory.NewPublisher(hooks)
 
 	subscriber1 := memory.NewSubscriber[TestEvent](opts)
 	subscriber2 := memory.NewSubscriber[TestEvent](opts)
