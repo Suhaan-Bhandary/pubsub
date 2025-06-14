@@ -7,10 +7,10 @@ type Publisher[Event any] interface {
 	Publish(event Event) error
 
 	// Subscribe registers a new subscriber to receive future events.
-	Subscribe(Subscriber Subscriber[Event])
+	Subscribe(subscriber Subscriber[Event])
 
 	// UnSubscribe removes an existing subscriber.
-	UnSubscribe(Subscriber Subscriber[Event])
+	UnSubscribe(subscriber Subscriber[Event])
 
 	// Close shuts down the publisher and releases any resources.
 	Close() error
@@ -21,6 +21,21 @@ type Subscriber[Event any] interface {
 	// Listen blocks or polls for the next available event.
 	// Returns false if further events cann't be fetched.
 	Listen() (Event, bool)
+
+	// Close shuts down the Subscriber and releases any resources.
+	Close()
+
+	// Push is called by the Publisher to send an event to this subscriber.
+	// User should not call this function.
+	Push(event Event)
+
+	// Acknowledge is called by the Publisher to acknowledge subscription.
+	// User must not call this function.
+	Acknowledge(publisher Publisher[Event])
+
+	// AckRemoval shuts down the subscriber and releases the resources, if no publisher is listening.
+	// User must not call this function.
+	AckRemoval(publisher Publisher[Event]) error
 }
 
 // EventEnvelope wraps an event payload along with a named identifier.

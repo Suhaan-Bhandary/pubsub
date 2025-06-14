@@ -38,7 +38,12 @@ publisher := memory.NewPublisher[MyEvent]()
 ### Create and Subscribe a Subscriber
 
 ```go
-subscriber := memory.NewSubscriber[MyEvent]()
+
+var opts = memory.SubscriberOptions{
+	BufferSize: 10000,
+}
+
+subscriber := memory.NewSubscriber[MyEvent](opts)
 publisher.Subscribe(subscriber)
 ```
 
