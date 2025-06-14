@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/Suhaan-Bhandary/pubsub"
@@ -12,13 +13,13 @@ type Empty struct{}
 // It supports publishing events of any type, specified by the Event type parameter.
 type publisher[Event any] struct {
 	mu          sync.RWMutex
-	subscribers map[pubsub.Subscriber[Event]]Empty
+	subscribers map[internalSubscriber[Event]]Empty
 }
 
 // NewPublisher creates a new in-memory publisher for a specific Event type.
 func NewPublisher[Event any]() pubsub.Publisher[Event] {
 	return &publisher[Event]{
-		subscribers: make(map[pubsub.Subscriber[Event]]Empty),
+		subscribers: make(map[internalSubscriber[Event]]Empty),
 	}
 }
 
@@ -33,20 +34,34 @@ func (p *publisher[Event]) Publish(event Event) error {
 	return nil
 }
 
-func (p *publisher[Event]) Subscribe(subscriber pubsub.Subscriber[Event]) {
+func (p *publisher[Event]) Subscribe(subscriber pubsub.Subscriber[Event]) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	p.subscribers[subscriber] = Empty{}
-	subscriber.Acknowledge(p)
+	internalSubscriber, ok := subscriber.(internalSubscriber[Event])
+	if !ok {
+		return fmt.Errorf("invalid subscriber")
+	}
+
+	p.subscribers[internalSubscriber] = Empty{}
+	internalSubscriber.Acknowledge(p)
+
+	return nil
 }
 
-func (p *publisher[Event]) UnSubscribe(subscriber pubsub.Subscriber[Event]) {
+func (p *publisher[Event]) UnSubscribe(subscriber pubsub.Subscriber[Event]) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	delete(p.subscribers, subscriber)
-	subscriber.AckRemoval(p)
+	internalSubscriber, ok := subscriber.(internalSubscriber[Event])
+	if !ok {
+		return fmt.Errorf("invalid subscriber")
+	}
+
+	delete(p.subscribers, internalSubscriber)
+	internalSubscriber.AckRemoval(p)
+
+	return nil
 }
 
 func (p *publisher[Event]) Close() error {
@@ -57,8 +72,21 @@ func (p *publisher[Event]) Close() error {
 		subscriber.AckRemoval(p)
 	}
 
-	p.subscribers = make(map[pubsub.Subscriber[Event]]Empty)
+	p.subscribers = make(map[internalSubscriber[Event]]Empty)
 	return nil
+}
+
+type internalSubscriber[Event any] interface {
+	pubsub.Subscriber[Event]
+
+	// Push is called by the Publisher to send an event to this subscriber.
+	Push(event Event)
+
+	// Acknowledge is called by the Publisher to acknowledge subscription.
+	Acknowledge(pub pubsub.Publisher[Event])
+
+	// AckRemoval shuts down the subscriber and releases the resources, if no publisher is listening.
+	AckRemoval(pub pubsub.Publisher[Event]) error
 }
 
 // subscriber is an in-memory generic implementation of the pubsub.Subscriber interface.
